@@ -21,6 +21,22 @@ Ubuntu 22.04 · NVIDIA GPU (>= 8 GB for vits, >= 24 GB for vitl)
 CUDA 12.1+  · Python 3.10 or 3.11   (NOT 3.12)
 ```
 
+## No GPU? Test it free on Colab
+
+Open [`colab/DepthMaker_Colab.ipynb`](colab/DepthMaker_Colab.ipynb) in Google Colab:
+
+**https://colab.research.google.com/github/foonkoons-cyber/oliv/blob/claude/build-app-apk-cr4a7j/backend/colab/DepthMaker_Colab.ipynb**
+
+Set Runtime → Change runtime type → **T4 GPU**, then run the cells. It installs the
+backend, downloads the Small (`vits`) checkpoint, starts the server and opens a
+Cloudflare quick tunnel, then prints a `https://….trycloudflare.com` URL and a
+freshly generated token to paste into the app's Settings.
+
+This is for testing. The session drops after roughly 90 minutes idle (12 hours max),
+the tunnel URL changes every run, and a T4 is much slower than the benchmark A100 —
+a 10-second clip takes a few minutes. For client work, run it on a rented GPU box
+with a stable domain as below.
+
 ## Setup
 
 ```bash

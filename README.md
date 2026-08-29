@@ -33,6 +33,14 @@ workflow (from repository secrets) and the `release` signing config picks them u
 `DEPTHMAKER_KEYSTORE`, `DEPTHMAKER_KEYSTORE_PASSWORD`, `DEPTHMAKER_KEY_ALIAS`,
 `DEPTHMAKER_KEY_PASSWORD`.
 
+### You need a backend running
+
+The app does no inference on the phone, so without a server it will say
+"Server set nahi hai" and stop. If you don't have a GPU, the
+[Colab notebook](backend/colab/DepthMaker_Colab.ipynb) gives you a free one with an
+HTTPS URL in about ten minutes —
+[open it directly](https://colab.research.google.com/github/foonkoons-cyber/oliv/blob/claude/build-app-apk-cr4a7j/backend/colab/DepthMaker_Colab.ipynb).
+
 ### First run
 
 The app ships with no server baked in. Open **Settings** (gear, top right) and set:
