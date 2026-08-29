@@ -1,0 +1,15 @@
+# Android / Gradle
+android/.gradle/
+android/build/
+android/app/build/
+android/local.properties
+*.iml
+.idea/
+out/
+
+# Python
+__pycache__/
+*.pyc
+backend/.venv/
+backend/data/
+backend/checkpoints/

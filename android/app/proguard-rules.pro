@@ -1,0 +1,5 @@
+-keepattributes Signature, InnerClasses, EnclosingMethod
+-keepattributes RuntimeVisibleAnnotations, RuntimeVisibleParameterAnnotations
+-keep class com.depthmaker.app.net.** { *; }
+-dontwarn okhttp3.**
+-dontwarn retrofit2.**
