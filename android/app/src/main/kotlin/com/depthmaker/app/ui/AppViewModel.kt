@@ -44,7 +44,11 @@ data class UiState(
     val error: String? = null,
     val notice: String? = null,
     val settings: Settings = Settings("", "", "vits", "mp4")
-)
+) {
+    /** The app is a thin client: with no backend there is nothing to run. */
+    val serverConfigured: Boolean
+        get() = SettingsRepository.isValidServerUrl(settings.serverUrl)
+}
 
 class AppViewModel(app: Application) : AndroidViewModel(app) {
 
@@ -122,8 +126,11 @@ class AppViewModel(app: Application) : AndroidViewModel(app) {
         val meta = _state.value.meta ?: return
         val s = _state.value.settings
         if (!SettingsRepository.isValidServerUrl(s.serverUrl)) {
+            // Nothing to talk to. Say that plainly and open Settings rather
+            // than starting a job that can only fail.
             _state.value = _state.value.copy(
-                error = "Server URL set nahi hai. Settings me https:// URL daalo."
+                screen = Screen.Settings,
+                error = "Server set nahi hai. Apne GPU server ka https:// URL aur token daalo."
             )
             return
         }

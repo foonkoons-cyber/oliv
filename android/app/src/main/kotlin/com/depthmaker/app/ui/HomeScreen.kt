@@ -44,6 +44,8 @@ import com.depthmaker.app.util.VideoMeta
 @Composable
 fun HomeScreen(
     meta: VideoMeta?,
+    serverConfigured: Boolean,
+    onOpenSettings: () -> Unit,
     onPick: () -> Unit,
     onClear: () -> Unit,
     onCreate: () -> Unit,
@@ -55,6 +57,11 @@ fun HomeScreen(
             .padding(horizontal = 20.dp),
         verticalArrangement = Arrangement.Center
     ) {
+        if (!serverConfigured) {
+            ServerNotSetBanner(onOpenSettings)
+            Spacer(Modifier.height(16.dp))
+        }
+
         if (meta == null) {
             DropZone(onPick)
         } else {
@@ -72,6 +79,28 @@ fun HomeScreen(
                 .height(56.dp)
         ) {
             Text("Create Depth Map", style = MaterialTheme.typography.bodyLarge)
+        }
+    }
+}
+
+@Composable
+private fun ServerNotSetBanner(onOpenSettings: () -> Unit) {
+    Surface(
+        color = Color(0xFF2A1F14),
+        shape = RoundedCornerShape(12.dp),
+        modifier = Modifier
+            .fillMaxWidth()
+            .clickable(onClick = onOpenSettings)
+    ) {
+        Column(Modifier.padding(16.dp)) {
+            Text("Server set nahi hai", style = MaterialTheme.typography.titleLarge)
+            Spacer(Modifier.height(4.dp))
+            Text(
+                "Depth processing GPU server par hoti hai, phone par nahi. " +
+                    "Settings me apne server ka https:// URL aur token daalo.",
+                style = MaterialTheme.typography.bodySmall,
+                color = TextSecondary
+            )
         }
     }
 }

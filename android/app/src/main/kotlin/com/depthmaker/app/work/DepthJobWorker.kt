@@ -4,6 +4,8 @@ import android.app.NotificationChannel
 import android.app.NotificationManager
 import android.content.Context
 import android.content.pm.ServiceInfo
+import android.net.ConnectivityManager
+import android.net.NetworkCapabilities
 import android.net.Uri
 import android.os.Build
 import androidx.core.app.NotificationCompat
@@ -26,7 +28,11 @@ import okhttp3.Request
 import retrofit2.HttpException
 import java.io.File
 import java.io.IOException
+import java.net.ConnectException
+import java.net.SocketTimeoutException
+import java.net.UnknownHostException
 import java.security.MessageDigest
+import javax.net.ssl.SSLException
 import kotlin.math.roundToInt
 
 class DepthJobWorker(
@@ -46,8 +52,14 @@ class DepthJobWorker(
         val model = inputData.getString(KEY_MODEL) ?: "vits"
         val format = inputData.getString(KEY_FORMAT) ?: "mp4"
 
+        if (serverUrl.isBlank()) {
+            return@withContext fail(
+                "ERR_NO_SERVER",
+                "Server set nahi hai. Settings me apne GPU server ka https:// URL aur token daalo."
+            )
+        }
         if (!serverUrl.startsWith("https://")) {
-            return@withContext fail("ERR_CONFIG", "Server URL set nahi hai. Settings kholo.")
+            return@withContext fail("ERR_CONFIG", "Sirf https:// URL chalega. Settings me theek karo.")
         }
 
         setForegroundSafely(0, "Taiyari ho rahi hai")
@@ -138,7 +150,11 @@ class DepthJobWorker(
                 else -> fail("ERR_SERVER", "Server ne request reject kar di (${e.code()}).")
             }
         } catch (e: IOException) {
-            fail("ERR_NET", "Internet nahi hai. Ye app processing ke liye server use karta hai.")
+            // "No internet" is only true when the phone really has no network.
+            // A wrong or sleeping server URL is a different problem and must
+            // not be reported as one.
+            val (code, message) = classifyNetworkError(e, serverUrl)
+            fail(code, message)
         } catch (e: Exception) {
             if (isStopped) {
                 withContext(NonCancellable) { cancelServerJob() }
@@ -287,6 +303,30 @@ class DepthJobWorker(
         "png16" -> "application/zip"
         "npz" -> "application/octet-stream"
         else -> "video/mp4"
+    }
+
+    private fun hasNetwork(): Boolean {
+        val cm = applicationContext.getSystemService(Context.CONNECTIVITY_SERVICE) as? ConnectivityManager
+            ?: return true
+        val caps = cm.getNetworkCapabilities(cm.activeNetwork) ?: return false
+        return caps.hasCapability(NetworkCapabilities.NET_CAPABILITY_INTERNET)
+    }
+
+    private fun classifyNetworkError(e: IOException, serverUrl: String): Pair<String, String> {
+        if (!hasNetwork()) {
+            return "ERR_NET" to "Internet nahi hai. Ye app processing ke liye server use karta hai."
+        }
+        val host = runCatching { android.net.Uri.parse(serverUrl).host }.getOrNull() ?: serverUrl
+        return when (e) {
+            is UnknownHostException ->
+                "ERR_HOST" to "Server address \"$host\" mila hi nahi. Settings me URL check karo."
+            is SSLException ->
+                "ERR_TLS" to "Server ka HTTPS certificate galat hai. URL check karo."
+            is ConnectException, is SocketTimeoutException ->
+                "ERR_UNREACHABLE" to "Server ($host) respond nahi kar raha. GPU box band ho sakta hai."
+            else ->
+                "ERR_UNREACHABLE" to "Server ($host) se connect nahi ho paya. Thodi der baad try karo."
+        }
     }
 
     private fun fail(code: String, message: String) =

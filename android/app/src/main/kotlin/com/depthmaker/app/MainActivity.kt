@@ -162,6 +162,8 @@ private fun AppRoot() {
             }
             Screen.Home -> HomeScreen(
                 meta = state.meta,
+                serverConfigured = state.serverConfigured,
+                onOpenSettings = vm::openSettings,
                 onPick = {
                     picker.launch(
                         PickVisualMediaRequest(ActivityResultContracts.PickVisualMedia.VideoOnly)

@@ -15,8 +15,10 @@ android {
         versionCode = 1
         versionName = "1.1.0"
 
-        // Defaults; the user can override both in Settings.
-        buildConfigField("String", "DEFAULT_SERVER_URL", "\"https://example.invalid/\"")
+        // Empty by default so "not configured" is distinguishable from "server
+        // down" — a placeholder host here just produces a DNS failure that
+        // looks like the phone has no internet.
+        buildConfigField("String", "DEFAULT_SERVER_URL", "\"\"")
         buildConfigField("String", "DEFAULT_TOKEN", "\"\"")
     }
 
