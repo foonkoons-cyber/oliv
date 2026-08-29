@@ -1,0 +1,9 @@
+# Enough to exercise depth_pipeline.py and the API on a GPU-less box.
+numpy<2
+opencv-python-headless
+imageio
+imageio-ffmpeg
+fastapi
+pydantic>=2
+httpx
+pytest

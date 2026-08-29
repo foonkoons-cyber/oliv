@@ -14,7 +14,7 @@ import java.io.RandomAccessFile
  */
 class ChunkedUploader(
     private val client: ApiClient,
-    private val onProgress: (uploadedBytes: Long, totalBytes: Long) -> Unit
+    private val onProgress: suspend (uploadedBytes: Long, totalBytes: Long) -> Unit
 ) {
     private val octet = "application/octet-stream".toMediaType()
 

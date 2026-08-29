@@ -1,0 +1,22 @@
+# Do NOT use the upstream requirements.txt as-is: it pins numpy==1.24.0, which
+# fails to build on Python 3.12 and on newer pip/setuptools
+# ("Getting requirements to build wheel did not run successfully").
+#
+# torch/torchvision are installed separately against the CUDA index:
+#   pip install torch torchvision --index-url https://download.pytorch.org/whl/cu121
+
+numpy<2
+opencv-python
+imageio
+imageio-ffmpeg
+matplotlib
+easydict
+einops          # hard import of video_depth_anything/motion_module.py
+tqdm            # hard import of video_depth_anything/video_depth.py
+fastapi
+uvicorn[standard]
+python-multipart
+pydantic>=2
+# decord is optional; dc_utils falls back to an OpenCV reader without it:
+#   pip install decord || pip install eva-decord
+# xformers is optional; the model warns and uses standard attention without it.

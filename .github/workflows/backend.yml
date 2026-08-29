@@ -1,0 +1,27 @@
+name: Backend tests
+
+on:
+  push:
+    branches: ["**"]
+    paths:
+      - "backend/**"
+      - ".github/workflows/backend.yml"
+  workflow_dispatch:
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: backend
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+      - name: Install test dependencies
+        run: pip install -r requirements-test.txt
+      - name: Run pipeline + API tests
+        # No GPU here: these cover the resize-back step, the encoder, output
+        # formats, the validation gate and the resumable upload contract.
+        run: pytest -q
