@@ -14,6 +14,12 @@ permissions:
 jobs:
   build:
     runs-on: ubuntu-latest
+    timeout-minutes: 40
+    env:
+      GRADLE_OPTS: "-Dorg.gradle.jvmargs=-Xmx4g -Dfile.encoding=UTF-8"
+      # The Kotlin compile daemon is the usual suspect when a CI build hangs
+      # with no output; run the compiler inside the Gradle process instead.
+      ORG_GRADLE_PROJECT_kotlin.compiler.execution.strategy: "in-process"
     defaults:
       run:
         working-directory: android
@@ -41,8 +47,13 @@ jobs:
           key: gradle-${{ runner.os }}-${{ hashFiles('android/**/*.gradle*', 'android/gradle/libs.versions.toml', 'android/gradle/wrapper/gradle-wrapper.properties') }}
           restore-keys: gradle-${{ runner.os }}-
 
-      - name: Build debug + release APKs
-        run: ./gradlew --no-daemon assembleDebug assembleRelease
+      - name: Build debug APK
+        timeout-minutes: 20
+        run: ./gradlew --no-daemon --stacktrace assembleDebug
+
+      - name: Build release APK
+        timeout-minutes: 20
+        run: ./gradlew --no-daemon --stacktrace assembleRelease
 
       - name: Collect APKs
         run: |
