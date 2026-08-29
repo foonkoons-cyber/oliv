@@ -1,0 +1,70 @@
+# DepthMaker
+
+Grayscale depth maps from short video clips, built to the DepthMaker v1.1 spec.
+
+Two pieces, in the order they must be built:
+
+| | What it is | Where |
+|---|---|---|
+| **Backend** | FastAPI + a separate GPU worker running Video Depth Anything | [`backend/`](backend) |
+| **Android app** | Thin client: pick → upload → poll → download → save. Zero inference. | [`android/`](android) |
+
+The app cannot run the model on the phone and does not try to. VDA is a
+spatio-temporal model consuming a 32-frame sliding window; per-frame mobile
+models (MiDaS Small, DA-V2 Small on TFLite) flicker on static pixels, and the
+weights need 6.8–23.6 GB of VRAM. See spec §0.
+
+---
+
+## Getting the APK
+
+Every push to a branch builds it. Download from either:
+
+* **Releases** — each successful build publishes `DepthMaker-debug.apk` and
+  `DepthMaker-release.apk` under a tag `apk-build-<n>`.
+* **Actions → Build APK → Artifacts → `DepthMaker-apk`.**
+
+Both APKs are installable by sideload. `release` is signed with the debug key
+unless a keystore is configured (see below), so install one or the other, not
+both — Android refuses an update signed by a different key.
+
+To sign release builds with a real key, set these environment variables in the
+workflow (from repository secrets) and the `release` signing config picks them up:
+`DEPTHMAKER_KEYSTORE`, `DEPTHMAKER_KEYSTORE_PASSWORD`, `DEPTHMAKER_KEY_ALIAS`,
+`DEPTHMAKER_KEY_PASSWORD`.
+
+### First run
+
+The app ships with no server baked in. Open **Settings** (gear, top right) and set:
+
+* **Server URL** — your backend, `https://…` only. Plain `http://` is rejected at
+  save time because Android blocks cleartext by default and it would look like a
+  server bug.
+* **Bearer token** — the same value as `DEPTHMAKER_TOKEN` on the server.
+
+Defaults are Standard model (`vits`, Apache-2.0, commercial-safe) and MP4 output.
+
+---
+
+## Licensing — read before client work
+
+| Model | License | Commercial use |
+|---|---|---|
+| Small (`vits`) | Apache-2.0 | **Yes** |
+| Base (`vitb`) | CC-BY-NC-4.0 | No |
+| Large (`vitl`) | CC-BY-NC-4.0 | No |
+
+The app defaults to `vits` and shows the non-commercial warning inline next to
+the High Quality option. For paid client delivery, stay on Standard.
+
+---
+
+## Repository layout
+
+```
+android/     Kotlin + Compose client (minSdk 29, targetSdk 35)
+backend/     FastAPI API, GPU worker, depth pipeline, tests
+.github/     APK build + backend test workflows
+```
+
+Backend setup, deployment and the acceptance checklist: [`backend/README.md`](backend/README.md).
