@@ -47,6 +47,10 @@ jobs:
           key: gradle-${{ runner.os }}-${{ hashFiles('android/**/*.gradle*', 'android/gradle/libs.versions.toml', 'android/gradle/wrapper/gradle-wrapper.properties') }}
           restore-keys: gradle-${{ runner.os }}-
 
+      - name: Unit tests
+        timeout-minutes: 15
+        run: ./gradlew --no-daemon --stacktrace testDebugUnitTest
+
       - name: Build debug APK
         timeout-minutes: 20
         run: ./gradlew --no-daemon --stacktrace assembleDebug

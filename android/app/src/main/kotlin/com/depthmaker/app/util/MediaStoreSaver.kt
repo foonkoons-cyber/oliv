@@ -16,9 +16,15 @@ object MediaStoreSaver {
      * Scoped-storage save into Movies/DepthMaker/ (RELATIVE_PATH — API 29+,
      * which is why minSdk is 29).
      */
-    fun saveToGallery(context: Context, source: File, originalName: String, mimeType: String): Uri? {
+    fun saveToGallery(
+        context: Context,
+        source: File,
+        originalName: String,
+        mimeType: String,
+        prefix: String = "depth"
+    ): Uri? {
         val stamp = SimpleDateFormat("yyyyMMdd_HHmmss", Locale.US).format(Date())
-        val base = "depth_${sanitizeBaseName(originalName)}_$stamp"
+        val base = "${prefix}_${sanitizeBaseName(originalName)}_$stamp"
 
         return when {
             mimeType.startsWith("video/") -> insert(

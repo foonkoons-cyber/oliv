@@ -65,6 +65,7 @@ android {
         }
     }
     sourceSets["main"].java.srcDirs("src/main/kotlin")
+    sourceSets["test"].java.srcDirs("src/test/kotlin")
 }
 
 dependencies {
@@ -87,4 +88,5 @@ dependencies {
     implementation(libs.okhttp)
     implementation(libs.okhttp.logging)
     debugImplementation(libs.androidx.ui.tooling)
+    testImplementation(libs.junit)
 }

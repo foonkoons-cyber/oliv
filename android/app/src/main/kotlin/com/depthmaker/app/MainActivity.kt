@@ -11,6 +11,7 @@ import androidx.activity.result.PickVisualMediaRequest
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.layout.padding
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.Brush
 import androidx.compose.material.icons.filled.Settings
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
@@ -39,6 +40,8 @@ import com.depthmaker.app.ui.ProcessingScreen
 import com.depthmaker.app.ui.ResultScreen
 import com.depthmaker.app.ui.Screen
 import com.depthmaker.app.ui.SettingsScreen
+import com.depthmaker.app.ui.ToonScreen
+import com.depthmaker.app.ui.ToonViewModel
 import com.depthmaker.app.ui.theme.DepthMakerTheme
 import com.depthmaker.app.util.MediaStoreSaver
 import kotlinx.coroutines.Dispatchers
@@ -59,7 +62,9 @@ class MainActivity : ComponentActivity() {
 @Composable
 private fun AppRoot() {
     val vm: AppViewModel = viewModel()
+    val toonVm: ToonViewModel = viewModel()
     val state by vm.state.collectAsState()
+    val toonState by toonVm.state.collectAsState()
     val context = LocalContext.current
     val scope = rememberCoroutineScope()
     val snackbar = remember { SnackbarHostState() }
@@ -77,6 +82,17 @@ private fun AppRoot() {
     val picker = androidx.activity.compose.rememberLauncherForActivityResult(
         ActivityResultContracts.PickVisualMedia()
     ) { uri -> if (uri != null) vm.onVideoPicked(uri) }
+
+    val toonPicker = androidx.activity.compose.rememberLauncherForActivityResult(
+        ActivityResultContracts.PickVisualMedia()
+    ) { uri -> if (uri != null) toonVm.onVideoPicked(uri) }
+
+    LaunchedEffect(toonState.error) {
+        toonState.error?.let {
+            snackbar.showSnackbar(it)
+            toonVm.dismissError()
+        }
+    }
 
     LaunchedEffect(state.error) {
         state.error?.let {
@@ -103,12 +119,24 @@ private fun AppRoot() {
         }
     }
 
+    LaunchedEffect(toonState.notice) {
+        toonState.notice?.let {
+            snackbar.showSnackbar(it)
+            toonVm.dismissNotice()
+        }
+    }
+
     Scaffold(
         snackbarHost = { SnackbarHost(snackbar) },
         topBar = {
             TopAppBar(
                 title = { Text("DepthMaker") },
                 actions = {
+                    IconButton(onClick = {
+                        if (state.screen == Screen.Toon) vm.closeSettings() else vm.openToon()
+                    }) {
+                        Icon(Icons.Filled.Brush, contentDescription = "Cartoon")
+                    }
                     IconButton(onClick = {
                         if (state.screen == Screen.Settings) vm.closeSettings() else vm.openSettings()
                     }) {
@@ -160,6 +188,35 @@ private fun AppRoot() {
                     modifier = Modifier.padding(inner)
                 )
             }
+            Screen.Toon -> ToonScreen(
+                state = toonState,
+                onPick = {
+                    toonPicker.launch(
+                        PickVisualMediaRequest(ActivityResultContracts.PickVisualMedia.VideoOnly)
+                    )
+                },
+                onFilter = toonVm::setFilter,
+                onStrength = toonVm::setStrength,
+                onResolution = toonVm::setResolution,
+                onFps = toonVm::setFps,
+                onExport = toonVm::export,
+                onCancel = toonVm::cancel,
+                onSave = {
+                    val file = toonState.result
+                    val name = toonState.meta?.displayName ?: "video"
+                    if (file != null) {
+                        scope.launch {
+                            val uri = withContext(Dispatchers.IO) {
+                                MediaStoreSaver.saveToGallery(context, file, name, "video/mp4", "toon")
+                            }
+                            savedUri = uri
+                            toonVm.showNotice(if (uri != null) "Saved to Gallery" else "Save nahi ho paya.")
+                        }
+                    }
+                },
+                onClear = toonVm::clearSelection,
+                modifier = Modifier.padding(inner)
+            )
             Screen.Home -> HomeScreen(
                 meta = state.meta,
                 serverConfigured = state.serverConfigured,

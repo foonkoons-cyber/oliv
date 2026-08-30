@@ -21,7 +21,7 @@ import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.launch
 import java.io.File
 
-enum class Screen { Home, Processing, Result, Settings }
+enum class Screen { Home, Processing, Result, Settings, Toon }
 
 data class ResultInfo(
     val file: File,
@@ -104,6 +104,12 @@ class AppViewModel(app: Application) : AndroidViewModel(app) {
 
     fun openSettings() {
         _state.value = _state.value.copy(screen = Screen.Settings)
+    }
+
+    /** The on-device cartoon path. Unlike the depth flow it needs no server, so
+     *  it is reachable even when Settings is empty. */
+    fun openToon() {
+        _state.value = _state.value.copy(screen = Screen.Toon)
     }
 
     fun closeSettings() {
