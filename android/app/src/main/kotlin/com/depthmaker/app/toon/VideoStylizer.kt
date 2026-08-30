@@ -101,7 +101,8 @@ class VideoStylizer(
         // Strip the container rotation before the decoder sees it: some decoders
         // honour it and rotate the buffer themselves, and combined with the
         // renderer's own rotation the frame would come out rotated twice.
-        val decoderFormat = MediaFormat().apply { copyFrom(videoFormat) }
+        // MediaFormat(MediaFormat) is the API 29 copy constructor; copyFrom is 34.
+        val decoderFormat = MediaFormat(videoFormat)
         decoderFormat.setInteger(KEY_ROTATION, 0)
         val decoder = MediaCodec.createDecoderByType(videoFormat.getString(MediaFormat.KEY_MIME)!!)
         decoder.configure(decoderFormat, renderer.inputSurface, null, 0)
