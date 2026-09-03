@@ -37,6 +37,37 @@ Haar frontal-face, profile-face and upper-body, and a dense optical-flow
 centroid when none of them fire. No weights are downloaded, so it runs in a
 sandbox with no access to model hosts.
 
+## Which person
+
+On a court there is more than one person, and "the biggest detection" will
+happily follow the wrong one. `--subject match` keeps the *interviewee*: it
+signs the torso of a reference frame as a hue/saturation histogram and, among
+every candidate in a frame, takes the best match. Below `--match-floor` the
+subject is reported absent rather than confused with someone else, so shots
+they are not in can be filtered out instead of silently mistracked.
+
+One reference frame is not enough. Light swings between setups over a shoot and
+saturation swings with it, so a signature taken in flat light scores the same
+person badly when they are backlit — measured, not assumed:
+
+| Shot | Who is in it | One reference | Six references |
+|---|---|---|---|
+| 0.00–3.04s | subject, from behind | 0.102 ✗ | **0.569** ✓ |
+| 3.04–18.88s | subject | 0.662 ✓ | 0.895 ✓ |
+| 18.88–22.28s | another player, other kit | 0.053 ✓ | 0.062 ✓ |
+| 22.28–27.08s | subject | 0.530 ✓ | 0.626 ✓ |
+| 27.08–29.84s | another player | 0.082 ✓ | 0.185 ✓ |
+| 29.84–37.40s | subject | 0.746 ✓ | 0.779 ✓ |
+| 37.40–39.76s | a third person | 0.112 ✓ | 0.175 ✓ |
+| 39.76–41.24s | hands, no face | 0.091 ✓ | 0.121 ✓ |
+| 41.24–56.68s | subject, backlit | 0.132 ✗ | **0.767** ✓ |
+| 56.68–60.96s | subject | 0.385 ✓ | 0.475 ✓ |
+
+One reference got 10 of 12 shots right and missed both hard ones. Six
+references spread across the clip got **12 of 12**, and left a clear gap —
+0.185 for the closest wrong answer against 0.475 for the weakest right one —
+which is why the floor sits at 0.30. Pass several `--ref-at` times.
+
 Raw detections are jumpy, so the track is conditioned before it drives
 anything: gaps between detections are linearly interpolated, the result is
 smoothed with a one-second Hann window, and the window's velocity is clamped to
@@ -90,11 +121,15 @@ Speech pauses are where a human editor cuts. Detecting them gets within about
 # split rushes into shots, score them, write a thumbnail per shot
 python3 shots.py rush_01.mov rush_02.mov --out shots.json --thumbs thumbs/
 
-# reframe one shot to 9:16, refusing to crop the subject out
+# reframe one shot to 9:16, tracking the interviewee and no one else
 python3 reframe.py --input rush_01.mov --out shot_004.mp4 \
     --start 41.2 --end 56.7 --size 1080x1920 --mode hybrid \
+    --subject match --ref-clip interview.mov --ref-at 6,24,46 \
     --report shot_004.json --qc shot_004_qc.png
 ```
+
+Drop `--subject match` and its reference flags to track whoever fills most of
+the frame instead — right for shots with only one person in them.
 
 `--qc` writes a one-frame-per-second contact sheet of the render, which is the
 fastest way to confirm by eye that nobody left the frame.

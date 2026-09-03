@@ -50,44 +50,101 @@ class SubjectDetector:
         self.upper = cv2.CascadeClassifier(hc + "haarcascade_upperbody.xml")
         self.prev_gray = None
 
-    def __call__(self, frame):
-        """Return (cx, cy, w, h, source) in downscaled coordinates, or None."""
+    def candidates(self, frame):
+        """Every person-like box in the frame, downscaled coords.
+
+        Returns (small_frame, [(cx, cy, w, h, source, confidence), ...]). More
+        than one person is the normal case on a court, so the caller decides
+        which one matters rather than this settling for the biggest.
+        """
         small = cv2.resize(frame, None, fx=DETECT_SCALE, fy=DETECT_SCALE)
         gray = cv2.cvtColor(small, cv2.COLOR_BGR2GRAY)
-        out = None
+        out = []
 
         found, weights = self.hog.detectMultiScale(
             small, winStride=(8, 8), padding=(8, 8), scale=1.06)
-        if len(found):
-            # widest-and-most-confident wins; several players may be in shot
-            k = int(np.argmax([w * h * (1 + float(c))
-                               for (x, y, w, h), c in zip(found, weights)]))
-            x, y, w, h = found[k]
-            out = (x + w / 2, y + h / 2, w, h, "hog")
+        for (x, y, w, h), c in zip(found, weights):
+            out.append((x + w / 2, y + h / 2, float(w), float(h),
+                        "hog", 1.0 + float(c)))
 
-        if out is None:
-            for cas, name, grow in ((self.face, "face", (3.0, 7.0)),
-                                    (self.profile, "profile", (3.0, 7.0)),
-                                    (self.upper, "upper", (1.2, 3.2))):
-                d = cas.detectMultiScale(gray, 1.1, 5, minSize=(24, 24))
-                if len(d):
-                    x, y, w, h = max(d, key=lambda b: b[2] * b[3])
-                    gw, gh = grow
-                    out = (x + w / 2, y + h * gh / 2, w * gw, h * gh, name)
-                    break
+        for cas, name, grow in ((self.face, "face", (3.0, 7.0)),
+                                (self.profile, "profile", (3.0, 7.0)),
+                                (self.upper, "upper", (1.2, 3.2))):
+            for x, y, w, h in cas.detectMultiScale(gray, 1.1, 5, minSize=(24, 24)):
+                gw, gh = grow
+                out.append((x + w / 2, y + h * gh / 2, w * gw, h * gh, name, 1.0))
 
-        if out is None and self.prev_gray is not None:
+        if not out and self.prev_gray is not None:
             flow = cv2.calcOpticalFlowFarneback(
                 self.prev_gray, gray, None, 0.5, 3, 15, 3, 5, 1.2, 0)
             mag = np.linalg.norm(flow, axis=2)
             if mag.mean() > 0.25:
                 ys, xs = np.nonzero(mag > np.percentile(mag, 97))
                 if len(xs) > 30:
-                    out = (float(xs.mean()), float(ys.mean()),
-                           small.shape[1] * 0.18, small.shape[0] * 0.55, "flow")
+                    out.append((float(xs.mean()), float(ys.mean()),
+                                small.shape[1] * 0.18, small.shape[0] * 0.55,
+                                "flow", 0.5))
 
         self.prev_gray = gray
-        return out
+        return small, out
+
+    def __call__(self, frame):
+        """The biggest candidate, for callers that just want "is anyone here"."""
+        _, cands = self.candidates(frame)
+        if not cands:
+            return None
+        cx, cy, w, h, src, _ = max(cands, key=lambda c: c[2] * c[3])
+        return (cx, cy, w, h, src)
+
+
+class SubjectSignature:
+    """Tells one person from another by the colour of what they are wearing.
+
+    A hue/saturation histogram of the torso separates an interviewee in team
+    kit from the other players on court, costs almost nothing to compare, and
+    unlike a re-identification network needs no weights -- which matters where
+    model hosts are unreachable.
+
+    It holds several reference histograms rather than one, and scores a
+    candidate at its best match against any of them. One reference is not
+    enough: a shoot's light swings between setups, and saturation swings with
+    it, so a signature taken in flat light scores badly against the same person
+    backlit. Sampling the reference clip at a spread of times covers that.
+    """
+
+    BINS = (30, 32)
+
+    def __init__(self, refs):
+        """refs: an iterable of (small_frame, box)."""
+        self.hists = [h for h in (self._hist(s, b) for s, b in refs)
+                      if h is not None]
+
+    @property
+    def hist(self):
+        return self.hists[0] if self.hists else None
+
+    @classmethod
+    def _hist(cls, small, box):
+        cx, cy, w, h = box[:4]
+        # torso only: skip the head, stop above the legs, inset from the edges
+        x0 = int(max(0, cx - w * 0.30));  x1 = int(min(small.shape[1], cx + w * 0.30))
+        y0 = int(max(0, cy - h * 0.22));  y1 = int(min(small.shape[0], cy + h * 0.18))
+        if x1 - x0 < 4 or y1 - y0 < 4:
+            return None
+        patch = cv2.cvtColor(small[y0:y1, x0:x1], cv2.COLOR_BGR2HSV)
+        hist = cv2.calcHist([patch], [0, 1], None, cls.BINS, [0, 180, 0, 256])
+        cv2.normalize(hist, hist, 0, 1, cv2.NORM_MINMAX)
+        return hist
+
+    def score(self, small, box):
+        """0..1 against the closest reference. 0 when the patch is unusable."""
+        if not self.hists:
+            return 0.0
+        h = self._hist(small, box)
+        if h is None:
+            return 0.0
+        return max(float(max(0.0, cv2.compareHist(r, h, cv2.HISTCMP_CORREL)))
+                   for r in self.hists)
 
 
 # --------------------------------------------------------------------------- #
@@ -170,6 +227,20 @@ def main():
                    help="keep the subject box this far inside the window, as a "
                         "fraction of window width")
     p.add_argument("--stride", type=int, default=2, help="detect every Nth frame")
+    p.add_argument("--subject", default="largest", choices=("largest", "match"),
+                   help="largest: track whoever fills most of the frame. "
+                        "match: track the person who looks like the reference, "
+                        "which is what you want when other people are on court")
+    p.add_argument("--ref-clip", default=None,
+                   help="clip holding a clean look at the subject, usually the "
+                        "interview itself")
+    p.add_argument("--ref-at", default=None,
+                   help="comma-separated seconds into --ref-clip to sample the "
+                        "subject, e.g. 4,20,48. Spread them across the clip so "
+                        "the signature covers more than one lighting setup")
+    p.add_argument("--match-floor", type=float, default=0.30,
+                   help="below this the subject is treated as absent from the "
+                        "frame rather than mistaken for someone else")
     p.add_argument("--report", default=None, help="write a JSON report here")
     p.add_argument("--strict", action="store_true",
                    help="exit non-zero if any frame would clip the subject")
@@ -195,29 +266,84 @@ def main():
     f_end = min(f_end, total) if total > 0 else f_end
     n = max(0, f_end - f_start)
 
+    # ---- reference signature ---------------------------------------------
+    signature = None
+    if args.subject == "match":
+        if not args.ref_clip or not args.ref_at:
+            sys.exit("--subject match needs --ref-clip and --ref-at")
+        times = [float(v) for v in str(args.ref_at).split(",") if v.strip()]
+        rc = cv2.VideoCapture(args.ref_clip)
+        rdet = SubjectDetector()
+        refs = []
+        for t in times:
+            rc.set(cv2.CAP_PROP_POS_MSEC, t * 1000)
+            ok, ref = rc.read()
+            if not ok:
+                print(f"  ref @{t}s: cannot read, skipped")
+                continue
+            rsmall, rcands = rdet.candidates(ref)
+            if not rcands:
+                print(f"  ref @{t}s: no person found, skipped")
+                continue
+            rbox = max(rcands, key=lambda c: c[2] * c[3])
+            refs.append((rsmall, rbox))
+            print(f"  ref @{t}s: {rbox[4]} detection")
+        rc.release()
+        signature = SubjectSignature(refs)
+        if not signature.hists:
+            sys.exit("no usable reference patch; try other --ref-at times")
+        print(f"signature from {len(signature.hists)} reference(s) "
+              f"in {args.ref_clip}")
+
     # ---- pass 1: detect ---------------------------------------------------
     det = SubjectDetector()
     cap.set(cv2.CAP_PROP_POS_FRAMES, f_start)
     cx = np.zeros(n); cy = np.zeros(n); bw = np.zeros(n); bh = np.zeros(n)
     present = np.zeros(n, dtype=bool)
     sources = {}
+    match_scores = np.zeros(n)
     last = None
+    prev_pt = None
     for i in range(n):
         ok, frame = cap.read()
         if not ok:
             n = i
             break
         if i % args.stride == 0:
-            last = det(frame)
+            small, cands = det.candidates(frame)
+            pick, best = None, -1.0
+            for c in cands:
+                area = (c[2] * c[3]) / (small.shape[0] * small.shape[1])
+                if signature is None:
+                    score = area * c[5]
+                else:
+                    m = signature.score(small, c)
+                    if m < args.match_floor:
+                        continue
+                    # appearance decides, with size and continuity as tie-breaks
+                    score = m + 0.25 * area
+                if prev_pt is not None:
+                    d = np.hypot(c[0] - prev_pt[0], c[1] - prev_pt[1])
+                    score += 0.20 * np.exp(-d / (small.shape[1] * 0.25))
+                if score > best:
+                    pick, best = c, score
+            if pick is not None:
+                last = (pick[0], pick[1], pick[2], pick[3], pick[4],
+                        signature.score(small, pick) if signature else 1.0)
+                prev_pt = (pick[0], pick[1])
+            elif signature is not None:
+                last = None            # subject genuinely not in this frame
         if last is not None:
-            x, y, w, h, src = last
+            x, y, w, h, src, mscore = last
             cx[i], cy[i] = x / DETECT_SCALE, y / DETECT_SCALE
             bw[i], bh[i] = w / DETECT_SCALE, h / DETECT_SCALE
             present[i] = True
+            match_scores[i] = mscore
             sources[src] = sources.get(src, 0) + 1
 
     cx, cy, bw, bh = (a[:n] for a in (cx, cy, bw, bh))
     present = present[:n]
+    match_scores = match_scores[:n]
     if not present.any():
         print("no subject found anywhere -- falling back to fill for the whole clip")
         args.mode = "fill"
@@ -314,6 +440,10 @@ def main():
         "source": f"{sw}x{sh}", "fps": round(fps, 3),
         "frames": written,
         "detection_rate": round(float(present.mean()), 4) if n else 0.0,
+        "subject_mode": args.subject,
+        "subject_present_rate": round(float(present.mean()), 4) if n else 0.0,
+        "match_score_mean": (round(float(match_scores[present].mean()), 3)
+                             if n and present.any() else 0.0),
         "detector_hits": sources,
         "window": [round(win_w, 1), round(win_h, 1)],
         "frames_subject_would_clip": clipped,
