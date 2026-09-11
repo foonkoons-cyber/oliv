@@ -1,0 +1,7 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Subscriptions and saved articles are worth restoring on a new phone; the HTTP caches
+     and validators are not. -->
+<full-backup-content>
+    <include domain="database" path="." />
+    <include domain="file" path="datastore" />
+</full-backup-content>

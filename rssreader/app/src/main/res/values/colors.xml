@@ -1,0 +1,7 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <!-- Only the pre-Compose window background and the launcher icon use these; the app's
+         real palette lives in ui/theme/Theme.kt. -->
+    <color name="window_background">#FFFAF7F2</color>
+    <color name="ic_launcher_background">#FF1B4332</color>
+</resources>
