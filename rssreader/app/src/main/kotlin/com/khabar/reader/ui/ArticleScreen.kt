@@ -60,7 +60,7 @@ fun ArticleScreen(
         HtmlBlocks.parse(article.contentHtml?.takeIf { it.isNotBlank() } ?: article.summary, link)
     }
     // A feed that ships only a teaser should say so rather than look like a broken article.
-    val summaryOnly = article.contentHtml.isNullOrBlank() && article.summary.isNotBlank()
+    val summaryOnly = !article.fullContent
 
     Scaffold(
         modifier = modifier,

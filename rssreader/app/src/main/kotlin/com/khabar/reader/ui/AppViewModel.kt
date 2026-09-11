@@ -357,14 +357,14 @@ class AppViewModel(app: Application) : AndroidViewModel(app) {
     fun setRefreshIntervalHours(v: Int) {
         viewModelScope.launch {
             prefsRepo.setRefreshIntervalHours(v)
-            RefreshScheduler.apply(getApplication(), prefsRepo.current())
+            RefreshScheduler.apply(getApplication<Application>(), prefsRepo.current())
         }
     }
 
     fun setWifiOnly(v: Boolean) {
         viewModelScope.launch {
             prefsRepo.setWifiOnly(v)
-            RefreshScheduler.apply(getApplication(), prefsRepo.current())
+            RefreshScheduler.apply(getApplication<Application>(), prefsRepo.current())
         }
     }
 

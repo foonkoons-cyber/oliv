@@ -334,6 +334,7 @@ class FeedRepository(
             author = item.author?.trim()?.takeIf { it.isNotEmpty() },
             summary = HtmlText.snippet(item.summaryHtml ?: item.contentHtml, 300),
             contentHtml = body,
+            fullContent = !item.contentHtml.isNullOrBlank(),
             imageUrl = item.imageUrl ?: HtmlText.firstImageUrl(body, link ?: feedUrl),
             // No date is common in hand-written feeds. Sorting by fetch time keeps such items
             // at the top once, instead of burying them in 1970.

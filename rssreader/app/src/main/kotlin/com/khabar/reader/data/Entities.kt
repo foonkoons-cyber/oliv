@@ -50,8 +50,10 @@ data class ArticleEntity(
     val author: String?,
     /** Plain-text snippet for the list row. */
     val summary: String,
-    /** Full HTML body when the feed ships one — this is what makes offline reading work. */
+    /** Best available body HTML — the full article when the feed ships one, else the summary. */
     val contentHtml: String?,
+    /** True when [contentHtml] is the real article rather than a teaser the publisher truncated. */
+    val fullContent: Boolean = false,
     val imageUrl: String?,
     val publishedAt: Long,
     val fetchedAt: Long,
