@@ -91,7 +91,7 @@ class FeedDiscoveryTest {
     @Test fun sniffsFeedRootsThroughPrologueNoise() {
         assertTrue(FeedDiscovery.looksLikeFeedText("<rss version=\"2.0\"><channel/></rss>"))
         assertTrue(FeedDiscovery.looksLikeFeedText("<?xml version=\"1.0\"?>\n<feed xmlns=\"x\"/>"))
-        assertTrue(FeedDiscovery.looksLikeFeedText("﻿<?xml version=\"1.0\"?><rdf:RDF/>"))
+        assertTrue(FeedDiscovery.looksLikeFeedText("\uFEFF<?xml version=\"1.0\"?><rdf:RDF/>"))
         assertTrue(
             FeedDiscovery.looksLikeFeedText(
                 "<?xml version=\"1.0\"?><!DOCTYPE rss><!-- note --><rss/>"

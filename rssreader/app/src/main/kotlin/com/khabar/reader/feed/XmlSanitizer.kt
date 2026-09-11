@@ -104,7 +104,7 @@ object XmlSanitizer {
         val first = xml.indexOf('<')
         return when {
             first < 0 -> xml
-            first == 0 -> xml.trimStart('﻿')
+            first == 0 -> xml.trimStart('\uFEFF')
             else -> xml.substring(first)
         }
     }

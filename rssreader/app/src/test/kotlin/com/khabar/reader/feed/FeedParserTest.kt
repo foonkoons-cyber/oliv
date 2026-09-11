@@ -149,7 +149,7 @@ class FeedParserTest {
     }
 
     @Test fun byteOrderMarkIsHandled() {
-        val xml = "﻿<?xml version=\"1.0\" encoding=\"UTF-8\"?><rss version=\"2.0\"><channel>" +
+        val xml = "\uFEFF<?xml version=\"1.0\" encoding=\"UTF-8\"?><rss version=\"2.0\"><channel>" +
             "<title>BOM feed</title><item><title>A</title><link>https://example.com/a</link></item>" +
             "</channel></rss>"
         val feed = FeedParser.parse(xml.toByteArray(Charsets.UTF_8), null, null)
@@ -167,8 +167,8 @@ class FeedParserTest {
     }
 
     @Test fun illegalControlCharactersAreStripped() {
-        val backspace = ""
-        val formFeed = ""
+        val backspace = "\u0008"
+        val formFeed = "\u000C"
         val xml = "<rss version=\"2.0\"><channel><title>T" + backspace + "X</title>" +
             "<item><title>A" + formFeed + "B</title><link>https://example.com/a</link></item>" +
             "</channel></rss>"

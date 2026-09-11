@@ -99,7 +99,7 @@ object FeedDiscovery {
 
     /** Cheap sniff: does this text begin with a feed root element? */
     fun looksLikeFeedText(text: String): Boolean {
-        var s = text.take(2000).trimStart('﻿', ' ', '\n', '\r', '\t')
+        var s = text.take(2000).trimStart('\uFEFF', ' ', '\n', '\r', '\t')
         // Step over the prolog, a doctype and any comments before the root element.
         var guard = 0
         while (guard++ < 8) {
