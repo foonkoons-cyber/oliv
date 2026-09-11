@@ -1,3 +1,27 @@
+# oliv
+
+Two independent Android apps live in this repository.
+
+| App | What it is | Where |
+|---|---|---|
+| **Khabar** | An offline-first RSS/Atom news reader. No backend, no API key, no account — the phone fetches publishers' public feeds directly and stores everything locally. | [`rssreader/`](rssreader) |
+| **DepthMaker** | Grayscale depth maps from short video clips. Needs the GPU backend in this repo. | [`android/`](android) + [`backend/`](backend) |
+
+They share nothing but the repository: separate Gradle projects, separate
+package names, separate CI workflows and separate APKs.
+
+---
+
+# Khabar — RSS news reader
+
+Add a feed URL (or just a site URL — it finds the feed), read headlines and full
+articles offline, save what you want to keep, and export your subscriptions as
+OPML whenever you like. Nothing to host and nothing to pay for.
+
+Full documentation, feature list and the honest caveats: [`rssreader/README.md`](rssreader/README.md).
+
+---
+
 # DepthMaker
 
 Grayscale depth maps from short video clips, built to the DepthMaker v1.1 spec.
@@ -70,9 +94,10 @@ the High Quality option. For paid client delivery, stay on Standard.
 ## Repository layout
 
 ```
-android/     Kotlin + Compose client (minSdk 29, targetSdk 35)
-backend/     FastAPI API, GPU worker, depth pipeline, tests
-.github/     APK build + backend test workflows
+rssreader/   Khabar — RSS reader, Kotlin + Compose, no backend (minSdk 24)
+android/     DepthMaker client, Kotlin + Compose (minSdk 29, targetSdk 35)
+backend/     DepthMaker's FastAPI API, GPU worker, depth pipeline, tests
+.github/     APK build workflows (one per app) + backend tests
 ```
 
 Backend setup, deployment and the acceptance checklist: [`backend/README.md`](backend/README.md).

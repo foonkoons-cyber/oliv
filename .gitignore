@@ -3,6 +3,10 @@ android/.gradle/
 android/build/
 android/app/build/
 android/local.properties
+rssreader/.gradle/
+rssreader/build/
+rssreader/app/build/
+rssreader/local.properties
 *.iml
 .idea/
 out/
