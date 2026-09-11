@@ -17,14 +17,18 @@ import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.filled.Close
 import androidx.compose.material.icons.filled.DoneAll
 import androidx.compose.material.icons.filled.Inbox
+import androidx.compose.material.icons.filled.MoreVert
 import androidx.compose.material.icons.filled.Refresh
 import androidx.compose.material.icons.filled.RssFeed
 import androidx.compose.material.icons.filled.Search
 import androidx.compose.material.icons.filled.Settings
 import androidx.compose.material3.CircularProgressIndicator
+import androidx.compose.material3.DropdownMenu
+import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.FilterChip
 import androidx.compose.material3.HorizontalDivider
@@ -41,7 +45,10 @@ import androidx.compose.material3.TopAppBarDefaults
 import androidx.compose.material3.pulltorefresh.PullToRefreshBox
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.focus.FocusRequester
@@ -72,6 +79,7 @@ fun TimelineScreen(
 ) {
     val listState = rememberLazyListState()
     val searchFocus = remember { FocusRequester() }
+    var menuOpen by remember { mutableStateOf(false) }
     val filteredFeed = state.feeds.firstOrNull { it.id == state.feedFilterId }
 
     // Jumping back to the top when the filter changes; otherwise the list keeps a scroll
@@ -113,20 +121,53 @@ fun TimelineScreen(
                 },
                 actions = {
                     if (!state.searching) {
+                        // Two actions plus an overflow: five icons leaves a 360dp phone with
+                        // barely enough room for the title, which is the thing being filtered.
                         IconButton(onClick = { onSearchToggle(true) }) {
                             Icon(Icons.Filled.Search, contentDescription = "Search")
                         }
                         IconButton(onClick = onRefresh, enabled = !state.refreshing) {
                             Icon(Icons.Filled.Refresh, contentDescription = "Refresh")
                         }
-                        IconButton(onClick = onMarkAllRead) {
-                            Icon(Icons.Filled.DoneAll, contentDescription = "Sab read mark karo")
+                        IconButton(onClick = { menuOpen = true }) {
+                            Icon(Icons.Filled.MoreVert, contentDescription = "Aur options")
                         }
-                        IconButton(onClick = onOpenFeeds) {
-                            Icon(Icons.Filled.RssFeed, contentDescription = "Feeds")
-                        }
-                        IconButton(onClick = onOpenSettings) {
-                            Icon(Icons.Filled.Settings, contentDescription = "Settings")
+                        DropdownMenu(
+                            expanded = menuOpen,
+                            onDismissRequest = { menuOpen = false }
+                        ) {
+                            DropdownMenuItem(
+                                text = { Text("Sab read mark karo") },
+                                leadingIcon = { Icon(Icons.Filled.DoneAll, contentDescription = null) },
+                                onClick = {
+                                    menuOpen = false
+                                    onMarkAllRead()
+                                }
+                            )
+                            DropdownMenuItem(
+                                text = { Text("Feeds") },
+                                leadingIcon = { Icon(Icons.Filled.RssFeed, contentDescription = null) },
+                                onClick = {
+                                    menuOpen = false
+                                    onOpenFeeds()
+                                }
+                            )
+                            DropdownMenuItem(
+                                text = { Text("Feed add karo") },
+                                leadingIcon = { Icon(Icons.Filled.Add, contentDescription = null) },
+                                onClick = {
+                                    menuOpen = false
+                                    onAddFeed()
+                                }
+                            )
+                            DropdownMenuItem(
+                                text = { Text("Settings") },
+                                leadingIcon = { Icon(Icons.Filled.Settings, contentDescription = null) },
+                                onClick = {
+                                    menuOpen = false
+                                    onOpenSettings()
+                                }
+                            )
                         }
                     }
                 },
